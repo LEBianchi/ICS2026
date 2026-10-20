@@ -1,4 +1,4 @@
-using Dsw2025Tpi.Api.NewFolder;
+    using Dsw2025Tpi.Api.NewFolder;
 using Dsw2025Tpi.Application.Services;
 using Dsw2025Tpi.Data;
 using Dsw2025Tpi.Data.Helper;
@@ -238,9 +238,10 @@ public class Program
             }
             catch (Exception ex)
             {
-                Console.WriteLine(" Error durante la carga de administradores:");
-                Console.WriteLine(ex.ToString());
+                logger.LogCritical(ex, "Error al inicializar la base de datos. La API no va a arrancar.");
+                throw;
             }
+
         }
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())
