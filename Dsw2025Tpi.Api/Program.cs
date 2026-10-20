@@ -77,7 +77,9 @@ public class Program
 
         builder.Services.AddDbContext<AuthenticateContext>(options =>
         {
-            options.UseSqlServer(builder.Configuration.GetConnectionString("Dsw2025TpiEntities"));
+            options.UseSqlServer(
+            builder.Configuration.GetConnectionString("Dsw2025TpiEntities"),
+            sql => sql.EnableRetryOnFailure());
         });
 
         // --- AQUÍ ESTÁ EL CAMBIO ---
@@ -118,10 +120,11 @@ public class Program
                 };
             });
 
-
         builder.Services.AddDbContext<Dsw2025TpiContext>(options =>
         {
-            options.UseSqlServer(builder.Configuration.GetConnectionString("Dsw2025TpiEntities"));
+            options.UseSqlServer(
+            builder.Configuration.GetConnectionString("Dsw2025TpiEntities"),
+            sql => sql.EnableRetryOnFailure());
         });
 
         builder.Services.AddSingleton<JwtTokenService>();
