@@ -77,7 +77,9 @@ public class Program
 
         builder.Services.AddDbContext<AuthenticateContext>(options =>
         {
-            options.UseSqlServer(builder.Configuration.GetConnectionString("Dsw2025TpiEntities"));
+            options.UseSqlServer(
+            builder.Configuration.GetConnectionString("Dsw2025TpiEntities"),
+            sql => sql.EnableRetryOnFailure());
         });
 
         // --- AQUÍ ESTÁ EL CAMBIO ---
@@ -118,10 +120,11 @@ public class Program
                 };
             });
 
-
         builder.Services.AddDbContext<Dsw2025TpiContext>(options =>
         {
-            options.UseSqlServer(builder.Configuration.GetConnectionString("Dsw2025TpiEntities"));
+            options.UseSqlServer(
+            builder.Configuration.GetConnectionString("Dsw2025TpiEntities"),
+            sql => sql.EnableRetryOnFailure());
         });
 
         builder.Services.AddSingleton<JwtTokenService>();
@@ -149,9 +152,15 @@ public class Program
         using (var scope = app.Services.CreateScope())
         {
             var services = scope.ServiceProvider;
+            var logger = services.GetRequiredService<ILogger<Program>>();
 
             try
             {
+                // Crea las tablas si no existen y aplica las migraciones pendientes
+                await services.GetRequiredService<AuthenticateContext>().Database.MigrateAsync();
+                var context = services.GetRequiredService<Dsw2025TpiContext>();
+                await context.Database.MigrateAsync();
+                logger.LogInformation("Migraciones aplicadas en los dos contextos.");
                 var userManager = services.GetRequiredService<UserManager<IdentityUser>>();
                 var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
 
@@ -225,14 +234,14 @@ public class Program
                 {
                     Console.WriteLine($" Archivo 'admins.json' no encontrado en: {jsonFilePath}");
                 }
-                var context = services.GetRequiredService<Dsw2025TpiContext>();
                 context.Seedwork<Customer>("customers.json");
             }
             catch (Exception ex)
             {
-                Console.WriteLine(" Error durante la carga de administradores:");
-                Console.WriteLine(ex.ToString());
+                logger.LogCritical(ex, "Error al inicializar la base de datos. La API no va a arrancar.");
+                throw;
             }
+
         }
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())
