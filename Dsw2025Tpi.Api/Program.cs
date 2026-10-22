@@ -22,6 +22,15 @@ public class Program
     {
         var builder = WebApplication.CreateBuilder(args);
 
+
+        var connectionString = builder.Configuration.GetConnectionString("Dsw2025TpiEntities");
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException(
+                "Falta la cadena de conexion ConnectionStrings:Dsw2025TpiEntities. " +
+                "En desarrollo: dotnet user-secrets. En Azure o Docker: variable ConnectionStrings__Dsw2025TpiEntities.");
+        }
+
         // Add services to the container.
         builder.Services.AddLogging(config =>
         {
@@ -37,11 +46,11 @@ public class Program
 
         builder.Services.AddControllers().AddJsonOptions(opt =>
         {
-            opt.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()); 
+            opt.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
 
         });
 
-        
+
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen(o =>
         {
@@ -78,7 +87,7 @@ public class Program
         builder.Services.AddDbContext<AuthenticateContext>(options =>
         {
             options.UseSqlServer(
-            builder.Configuration.GetConnectionString("Dsw2025TpiEntities"),
+            connectionString,
             sql => sql.EnableRetryOnFailure());
         });
 
@@ -90,15 +99,21 @@ public class Program
                 RequiredLength = 8
             };
 
-          
+
         })
         .AddEntityFrameworkStores<AuthenticateContext>()
         .AddDefaultTokenProviders()
-        .AddErrorDescriber<SpanishIdentityErrorDescriber>(); 
+        .AddErrorDescriber<SpanishIdentityErrorDescriber>();
 
 
         var jwtConfig = builder.Configuration.GetSection("Jwt");
-        var keyText = jwtConfig["Key"] ?? throw new ArgumentNullException("JWT Key");
+        var keyText = jwtConfig["Key"];
+        if (string.IsNullOrWhiteSpace(keyText) || Encoding.UTF8.GetByteCount(keyText) < 32)
+        {
+            throw new InvalidOperationException(
+                "Falta la clave JWT (Jwt:Key) o tiene menos de 32 caracteres. " +
+                "En desarrollo: dotnet user-secrets. En Azure o Docker: variable Jwt__Key.");
+        }
         var key = Encoding.UTF8.GetBytes(keyText);
 
         builder.Services.AddAuthentication(options =>
@@ -123,7 +138,7 @@ public class Program
         builder.Services.AddDbContext<Dsw2025TpiContext>(options =>
         {
             options.UseSqlServer(
-            builder.Configuration.GetConnectionString("Dsw2025TpiEntities"),
+            connectionString,
             sql => sql.EnableRetryOnFailure());
         });
 
@@ -139,7 +154,7 @@ public class Program
             options.AddPolicy("AllowFrontend",
                 policy =>
                 {
-                    policy.WithOrigins("http://localhost:5173") 
+                    policy.WithOrigins("http://localhost:5173")
                           .AllowAnyHeader()
                           .AllowAnyMethod()
                           .AllowCredentials();

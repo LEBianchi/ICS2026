@@ -29,3 +29,38 @@ Del relevamiento preliminar se identificaron los siguientes requisitos:
 
 - Lenguaje: C# 12.0
 - Plataforma: .NET 8
+
+
+## Configuración local
+
+La cadena de conexión y la clave JWT **no están en el repositorio**. Cada integrante las carga en su máquina con User Secrets (se guardan fuera del repo y solo se leen en modo Development).
+
+Desde la raíz del repositorio:
+
+1. Generar una clave propia (en Git Bash):
+
+```bash
+   openssl rand -base64 64 | tr -d '\n'; echo
+```
+
+2. Cargar los dos secretos:
+
+```bash
+   dotnet user-secrets set "ConnectionStrings:Dsw2025TpiEntities" 'Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=Dsw2025Tpi;Integrated Security=True;' --project Dsw2025Tpi.Api
+   dotnet user-secrets set "Jwt:Key" 'PEGAR_LA_CLAVE_GENERADA' --project Dsw2025Tpi.Api
+```
+
+3. Verificar:
+
+```bash
+   dotnet user-secrets list --project Dsw2025Tpi.Api
+```
+
+Si falta alguno de los dos valores, la API no arranca y muestra un mensaje indicando cuál falta.
+
+En Docker y en Azure se usan variables de entorno, con doble guion bajo en lugar de los dos puntos:
+
+| Variable | Contenido |
+| --- | --- |
+| `ConnectionStrings__Dsw2025TpiEntities` | Cadena de conexión a la base |
+| `Jwt__Key` | Clave de firma de los tokens (mínimo 32 caracteres) |
