@@ -59,8 +59,10 @@ public class Program
             {
                 In = ParameterLocation.Header,
                 Name = "Authorization",
-                Description = "Ingrese el token",
-                Type = SecuritySchemeType.ApiKey
+                Description = "Pegar solo el token, sin la palabra Bearer",
+                Type = SecuritySchemeType.Http,
+                Scheme = "bearer",
+                BearerFormat = "JWT"
             });
             o.AddSecurityRequirement(new OpenApiSecurityRequirement
             {
@@ -242,14 +244,19 @@ public class Program
             }
         }
 
-        // Configure the HTTP request pipeline.
+        // Swagger habilitado en todos los entornos 
+        app.UseSwagger();
+        app.UseSwaggerUI(c =>
+        {
+            c.SwaggerEndpoint("/swagger/v1/swagger.json", "Dsw2025Tpi API v1");
+            c.RoutePrefix = "swagger";
+        });
+
+        // En Docker y en Azure el HTTPS lo resuelve la plataforma, no la API
         if (app.Environment.IsDevelopment())
         {
-            app.UseSwagger();
-            app.UseSwaggerUI();
+            app.UseHttpsRedirection();
         }
-
-        app.UseHttpsRedirection();
         app.UseCors("AllowFrontend");
 
         app.UseMiddleware<ExceptionHandlingMiddleware>();
