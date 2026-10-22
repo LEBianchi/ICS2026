@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
- 
+using System.Text.Json.Serialization;
 
 namespace Dsw2025Tpi.Api;
 
@@ -20,7 +20,6 @@ public class Program
     public static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
-
 
         var connectionString = builder.Configuration.GetConnectionString("Dsw2025TpiEntities");
         if (string.IsNullOrWhiteSpace(connectionString))
@@ -41,6 +40,11 @@ public class Program
             {
                 config.AddFile(path);
             }
+        });
+
+        builder.Services.AddControllers().AddJsonOptions(opt =>
+        {
+            opt.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
         });
 
         builder.Services.AddEndpointsApiExplorer();
@@ -79,8 +83,8 @@ public class Program
         builder.Services.AddDbContext<AuthenticateContext>(options =>
         {
             options.UseSqlServer(
-            connectionString,
-            sql => sql.EnableRetryOnFailure());
+                connectionString,
+                sql => sql.EnableRetryOnFailure());
         });
 
         // --- AQUÍ ESTÁ EL CAMBIO ---
@@ -90,13 +94,10 @@ public class Program
             {
                 RequiredLength = 8
             };
-
-
         })
         .AddEntityFrameworkStores<AuthenticateContext>()
         .AddDefaultTokenProviders()
         .AddErrorDescriber<SpanishIdentityErrorDescriber>();
-
 
         var jwtConfig = builder.Configuration.GetSection("Jwt");
         var keyText = jwtConfig["Key"];
@@ -130,8 +131,8 @@ public class Program
         builder.Services.AddDbContext<Dsw2025TpiContext>(options =>
         {
             options.UseSqlServer(
-            connectionString,
-            sql => sql.EnableRetryOnFailure());
+                connectionString,
+                sql => sql.EnableRetryOnFailure());
         });
 
         builder.Services.AddSingleton<JwtTokenService>();
@@ -155,7 +156,7 @@ public class Program
 
         var app = builder.Build();
 
-        //para crear los roles y cargar los administradores desde el archivo JSON
+        // Crea las tablas, los roles, el administrador inicial y los clientes de ejemplo
         using (var scope = app.Services.CreateScope())
         {
             var services = scope.ServiceProvider;
@@ -168,6 +169,7 @@ public class Program
                 var context = services.GetRequiredService<Dsw2025TpiContext>();
                 await context.Database.MigrateAsync();
                 logger.LogInformation("Migraciones aplicadas en los dos contextos.");
+
                 var userManager = services.GetRequiredService<UserManager<IdentityUser>>();
                 var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
 
@@ -186,25 +188,23 @@ public class Program
                     Console.WriteLine($"Rol '{userRole}' creado.");
                 }
 
-
-                string jsonFilePath = Path.Combine(AppContext.BaseDirectory, "admins.json");
-
+                // Administrador inicial desde la configuracion (User Secrets o variables de entorno)
                 var adminConfig = app.Configuration.GetSection("SeedAdmin");
                 var adminUsername = adminConfig["Username"];
                 var adminEmail = adminConfig["Email"];
                 var adminPassword = adminConfig["Password"];
 
-
-                if(string.IsNullOrWhiteSpace(adminUsername) || 
-                   string.IsNullOrWhiteSpace(adminEmail) || 
-                   string.IsNullOrWhiteSpace(adminPassword))
+                if (string.IsNullOrWhiteSpace(adminUsername) ||
+                    string.IsNullOrWhiteSpace(adminEmail) ||
+                    string.IsNullOrWhiteSpace(adminPassword))
                 {
-                    throw new InvalidOperationException("Falta la configuracion del administrador inicial: \r\nSeedAdmin:Username, SeedAdmin:Email y SeedAdmin:Password. " + "" +
-                        "En desarrollo: dotnet user-secrets. En Azure o Docker: \r\nSeedAdmin__Username, SeedAdmin__Email y SeedAdmin__Password.");
+                    throw new InvalidOperationException(
+                        "Falta la configuracion del administrador inicial: SeedAdmin:Username, SeedAdmin:Email y SeedAdmin:Password. " +
+                        "En desarrollo: dotnet user-secrets. En Azure o Docker: SeedAdmin__Username, SeedAdmin__Email y SeedAdmin__Password.");
                 }
 
                 var adminUser = await userManager.FindByNameAsync(adminUsername);
-                if(adminUser == null)
+                if (adminUser == null)
                 {
                     adminUser = new IdentityUser
                     {
@@ -213,21 +213,24 @@ public class Program
                         EmailConfirmed = true
                     };
                     var createResult = await userManager.CreateAsync(adminUser, adminPassword);
-                    if( !createResult.Succeeded)
+                    if (!createResult.Succeeded)
                     {
-                        throw new InvalidOperationException("No se pudo crear el administrador inicial: " + string.Join("", createResult.Errors.Select(e => e.Description)));
+                        throw new InvalidOperationException(
+                            "No se pudo crear el administrador inicial: " +
+                            string.Join(" ", createResult.Errors.Select(e => e.Description)));
                     }
-                    logger.LogInformation("Administrador Inicial {Username} creado.", adminUsername);
+                    logger.LogInformation("Administrador inicial {Username} creado.", adminUsername);
                 }
-                else if ( !string.Equals(adminUser.Email, adminEmail, StringComparison.OrdinalIgnoreCase))
+                else if (!string.Equals(adminUser.Email, adminEmail, StringComparison.OrdinalIgnoreCase))
                 {
-                    throw new InvalidOperationException($"Ya existe un usuario {adminUsername} con otro mail. No se le asigna el rol de administrador.");
+                    throw new InvalidOperationException(
+                        $"Ya existe un usuario '{adminUsername}' con otro email. No se le asigna el rol de administrador.");
                 }
 
-                if(!await userManager.IsInRoleAsync(adminUser, adminRole))
+                if (!await userManager.IsInRoleAsync(adminUser, adminRole))
                 {
                     await userManager.AddToRoleAsync(adminUser, adminRole);
-                    logger.LogInformation("Administrador Inicial {Username} asignado al rol {Role}.", adminUsername, adminRole);
+                    logger.LogInformation("Administrador inicial {Username} asignado al rol {Role}.", adminUsername, adminRole);
                 }
 
                 context.Seedwork<Customer>("customers.json");
@@ -237,8 +240,8 @@ public class Program
                 logger.LogCritical(ex, "Error al inicializar la base de datos. La API no va a arrancar.");
                 throw;
             }
-
         }
+
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())
         {
