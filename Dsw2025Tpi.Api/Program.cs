@@ -89,7 +89,7 @@ public class Program
                 sql => sql.EnableRetryOnFailure());
         });
 
-        // --- AQUÍ ESTÁ EL CAMBIO ---
+        // --- AQU  EST  EL CAMBIO ---
         builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
         {
             options.Password = new PasswordOptions
@@ -257,7 +257,7 @@ public class Program
         {
             app.UseHttpsRedirection();
         }
-        app.UseCors("AllowFrontend");
+        app.UseCors("AllowFrontend")
 
         app.UseMiddleware<ExceptionHandlingMiddleware>();
 
