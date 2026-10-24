@@ -52,7 +52,7 @@ public class Program
         {
             o.SwaggerDoc("v1", new OpenApiInfo
             {
-                Title = "Desarollo de software TPI",
+                Title = "Dsw2025Tpi API - TP3",
                 Version = "v1",
             });
             o.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
