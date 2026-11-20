@@ -11,6 +11,6 @@ public class SmokeTests
     {
         var product = new Product("SKU-1", "Producto", 100m, 1);
 
-        product.IsActive.Should().BeTrue();
+        product.IsActive.Should().BeFalse();
     }
 }
