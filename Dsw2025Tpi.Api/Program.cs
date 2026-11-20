@@ -166,11 +166,22 @@ public class Program
 
             try
             {
-                // Crea las tablas si no existen y aplica las migraciones pendientes
-                await services.GetRequiredService<AuthenticateContext>().Database.MigrateAsync();
+                var authContext = services.GetRequiredService<AuthenticateContext>();
                 var context = services.GetRequiredService<Dsw2025TpiContext>();
-                await context.Database.MigrateAsync();
-                logger.LogInformation("Migraciones aplicadas en los dos contextos.");
+
+                if (app.Environment.IsEnvironment("Testing"))
+                {
+                    // Pruebas de integracion (TP4): SQLite en memoria, las tablas salen del modelo
+                    await authContext.Database.EnsureCreatedAsync();
+                    await context.Database.EnsureCreatedAsync();
+                }
+                else
+                {
+                    // Crea las tablas si no existen y aplica las migraciones pendientes
+                    await authContext.Database.MigrateAsync();
+                    await context.Database.MigrateAsync();
+                    logger.LogInformation("Migraciones aplicadas en los dos contextos.");
+                }
 
                 var userManager = services.GetRequiredService<UserManager<IdentityUser>>();
                 var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
