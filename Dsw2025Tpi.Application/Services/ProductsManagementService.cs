@@ -99,22 +99,17 @@ namespace Dsw2025Tpi.Application.Services
                 isActiveFilter = parsedStatus;
             }
 
+            var search = string.IsNullOrWhiteSpace(filter.Search) ? null : filter.Search.Trim().ToLower();
+
             var filteredProducts = await _repository.GetFiltered<Product>(p =>
-                
                 (includeInactive || p.IsActive)
-
                 &&
-
-                
                 (!isActiveFilter.HasValue || p.IsActive == isActiveFilter.Value)
-
                 &&
-
-                
-                (string.IsNullOrEmpty(filter.Search)
-                    || (p.Name != null && p.Name.Contains(filter.Search))
-                    || (p.InternalCode != null && p.InternalCode.Contains(filter.Search))
-                    || (p.Sku != null && p.Sku.Contains(filter.Search))
+                (search == null
+                    || (p.Name != null && p.Name.ToLower().Contains(search))
+                    || (p.InternalCode != null && p.InternalCode.ToLower().Contains(search))
+                    || (p.Sku != null && p.Sku.ToLower().Contains(search))
                 )
             );
 
