@@ -37,14 +37,19 @@ namespace Dsw2025Tpi.Api.NewFolder
 
             switch (exception)
             {
+                // 409 Conflict: ya existe una entidad con ese dato unico (ej. SKU)
+                case DuplicatedEntityException:
+                    status = HttpStatusCode.Conflict;
+                    message = exception.Message;
+                    break;
+
                 // 400 Bad Request
                 case InvalidOrderDataException or
                      InvalidDataException or
                      InvalidOrderStatusException or
-                     DuplicatedEntityException or
                      ArgumentException or
                      InsufficientStockException or
-                     ArgumentNullException: 
+                     ArgumentNullException:
                     status = HttpStatusCode.BadRequest;
                     message = exception.Message;
                     break;
